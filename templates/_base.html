@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Processing page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}" media="screen">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/usebootstrap.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ol.css') }}">
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/usebootstrap.js') }}"></script>
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.gif') }}" type="image/gif" />
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="../static/js/html5shiv.js"></script>
+      <script src="../static/js/respond.min.js"></script>
+    <![endif]-->
+
+    {% block header %}
+    {% endblock %}
+  </head>
+  <body class="body-hyper">
+    <div class="navbar navbar-default navbar-fixed-top">
+        <div class="nav-container container">
+            <a href="http://www.nerc.ac.uk/" target="_blank" class="navbar-brand navbar-brand-image">
+                <img src="{{ url_for('static', filename='images/nerc_logo.png') }}" width="86" height="60" border="0" title="NERC Homepage">
+            </a>
+        </div>
+    </div>
+    <div class = "container">
+      {% block content %}
+      {% endblock %}
+    </div>
+  </body>

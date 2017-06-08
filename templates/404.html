@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="../static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="bs-component">
+            <div class="well bs-component">
+                <h1>{{ title }}</h1>
+                <p>
+                    {{ Error }}
+                    If this resulted from a link on NERC-ARF-DAN's website please email us at {{ emailaddress }}.
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

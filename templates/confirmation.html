@@ -1,0 +1,21 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="../static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="bs-component">
+            <div class="well bs-component">
+                <title>Request successfully confirmed.</title>
+                <p>
+                    Your request has been confirmed and processing will begin shortly. Remember to check your email inbox for access to the download link once your data have been produced.
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

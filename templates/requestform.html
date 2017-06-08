@@ -1,0 +1,621 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+<div class="row">
+<h1>Submit processing job for Project Code: {{ project_code }} Julian Day: {{ julian_day }} Year: {{ year }} </h1>
+</div>
+<form class="form-horizontal" action="progress" method="post" enctype="multipart/form-data" onsubmit="validateForm(event);" onkeypress="if(event.keyCode == 13) { return false };">
+    <div class="row">
+        <div class="col-lg-12 col-no-lr-pad">
+            <div class="well bs-component">
+                <legend>General</legend>
+                <fieldset>
+                    <div class="col-lg-12 has-warning" id="email_section">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p>
+                                    This is the job request page for day {{ julian_day }} and is used to create processing requests for NERC-ARF data using the NERC-ARF-DAN systems. Whilst we  aim to get data to you as quickly as possible, timings will depend on system load. Most options have been <strong>preset with optimum values</strong> where appropriate. When your jobs have completed you will receive an email detailing download instructions.
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-row">
+                                    <p>Your confirmation and download links will be sent to this email address so please make sure it is correct and that you have access to it!</p>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col-lg-3">
+                                        <label for="email" class="control-label">Email address</label>
+                                    </div>
+                                    <div class="col-lg-5">
+                                        <input type="text" class="form-control" name="email" id="email" placeholder="Email" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$" onblur="checkEmailField(this);" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row col-lg-12">
+                           <p>If using data produced from this tool for publications you <strong>must</strong> cite this paper:
+                           <a target="_blank" href="http://dl.acm.org/citation.cfm?id=2589087">Data processing of remotely sensed airborne hyperspectral data using the Airborne Processing Library (APL): Geocorrection algorithm descriptions and spatial accuracy assessment</a></p>
+                           <p>E.g. :  Warren, M.A., Taylor, B.H., Grant, M.G. and Shutler, J.D. (2014) ‘Data processing of remotely sensed airborne hyperspectral data using the airborne processing library (APL)’, Computers & Geosciences, 64, pp. 24–34. doi: 10.1016/j.cageo.2013.11.006.</p>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12 col-no-lr-pad">
+            <div class="well bs-component" id="line_checks_div">
+                <div class="panel panel-no-margin panel-primary">
+                <table class="table table-striped table-hover table-fixed header-fixed" id="line_checks_container">
+                    <thead class="panel-heading panel-heading-border-solid">
+                        <tr>
+                            <th width=2%><input type="checkbox" id="all_lines_check" name="process_all_lines" checked=""></th>
+                            <th width=21%>Process</th>
+                            <th width=43%>Flightline name</th>
+                            <th width=33%>Band groups</th>
+                        </tr>
+                    </thead>
+                    <tbody class="panel-body">
+                        {% for line in flightlines %}
+                        <tr>
+                            <td width=2%><input type="checkbox" id="line_checkboxes" name="{{ line.name }}_line_check" checked=""></td>
+                            <td width=21%>&nbsp</td>
+                            <td width=43%>{{ line.name }}</td>
+                            <td width=33%>
+                                <table>
+                                    <td>Start </td>
+                                    <td>
+                                        <select class="form-control-small" id="{{ line.name }}_band_start" onchange="checkBandValue('{{ line.name }}_band_start', '{{ line.name }}_band_stop')" name="{{ line.name }}_band_start">
+                                            {% for band in line.bands %}
+                                            <option value="{{ band.band_main }}">{{ band.band_full }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>End</td>
+                                    <td>
+                                        <select class="form-control-small" id="{{ line.name }}_band_stop" onchange="checkBandValue('{{ line.name }}_band_start', '{{ line.name }}_band_stop')" name="{{ line.name }}_band_stop">
+                                            {% for band in line.bands %}
+                                            <option value="{{ band.band_main }}" {% if band.band_main == line.bandsmax %}selected=''{% endif %}>{{ band.band_full }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </table>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <script>
+                        $("#all_lines_check").change(function () {
+                            $("#line_checks_container :checkbox").prop('checked', $(this).prop('checked'));
+                        });
+
+                        $("#line_checks_container :checkbox").change(function () {
+                            if ($("#all_lines_check").prop('checked') == true) {
+                                $("#all_lines_check").prop('checked', $(this).prop("checked"));
+                            }
+                        });
+                    </script>
+                    </div>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="row">
+       <div class="col-lg-12 col-no-lr-pad">
+           <div class="col-lg-6 col-no-l-pad">
+           <div class="col-lg-12">
+           <div class="row">
+               <div class="well bs-component">
+                   <fieldset>
+                       <legend>Masking</legend>
+                       <div class="form-group">
+                           <div class="col-lg-12">
+                           <p>Selecting "mask all" will apply all bad pixel masking techniques. For full details of the masking techniques that can be used please see the masking <a target="_blank" href="../trac/wiki/FAQ/aplmask">wiki page</a>.</p>
+                              <div class="checkbox">
+                                   <div class="row">
+                                       <div class="col-lg-12">
+                                          <div class="row">
+                                             <div class="col-lg-12">
+                                                <div class="col-lg-4">
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_u" name="mask_check_u"  checked=""> Underflows
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_o" name="mask_check_o"  checked=""> Overflows
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_m" name="mask_check_m"  checked=""> Uncorrected Smear
+                                                      </label>
+                                                   </div>
+                                                </div>
+                                                <div class="col-lg-4">
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_n" name="mask_check_n"  checked=""> Dropped Scans
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_r" name="mask_check_r"  checked=""> Corrupt raw data
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_q" name="mask_check_q"  checked=""> Quality control failures
+                                                      </label>
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          <div class "row">
+                                             &nbsp
+                                             <p>CCD bad pixel masking methods</p>
+                                          </div>
+                                          <div class="row">
+                                             <div class="col-lg-12">
+                                                <div class="col-lg-4">
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_a" name="mask_check_a"  checked=""> Method A
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_b" name="mask_check_b"  checked=""> Method B
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_c" name="mask_check_c"  checked=""> Method C
+                                                      </label>
+                                                   </div>
+                                                </div>
+                                                <div class="col-lg-4">
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_d" name="mask_check_d"  checked=""> Method D
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_e" name="mask_check_e"  checked=""> Method E
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_check_f" name="mask_check_f"  checked=""> Method F
+                                                      </label>
+                                                   </div>
+                                                </div>
+                                                <div class="col-lg-4">
+                                                   <div class="row">
+                                                      &nbsp
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                         <input type="checkbox" id="mask_all_check" name="mask_all_check"  checked=""> Mask all
+                                                      </label>
+                                                   </div>
+                                                   <div class="row">
+                                                      <label>
+                                                           <input type="checkbox" id="mask_none_check" name="mask_none_check" > Mask none
+                                                      </label>
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </div>
+                                   <script>
+                                       $("#mask_all_check").change(function () {
+                                          $("#mask_none_check").prop('checked', false);
+                                          $("#mask_check_a").prop('checked', true);
+                                          $("#mask_check_b").prop('checked', true);
+                                          $("#mask_check_c").prop('checked', true);
+                                          $("#mask_check_d").prop('checked', true);
+                                          $("#mask_check_e").prop('checked', true);
+                                          $("#mask_check_f").prop('checked', true);
+                                          $("#mask_check_u").prop('checked', true);
+                                          $("#mask_check_o").prop('checked', true);
+                                          $("#mask_check_m").prop('checked', true);
+                                          $("#mask_check_n").prop('checked', true);
+                                          $("#mask_check_r").prop('checked', true);
+                                          $("#mask_check_q").prop('checked', true);
+                                       });
+                                       $("#mask_none_check").change(function () {
+                                          $("#mask_all_check").prop('checked', false);
+                                          $("#mask_check_a").prop('checked', false);
+                                          $("#mask_check_b").prop('checked', false);
+                                          $("#mask_check_c").prop('checked', false);
+                                          $("#mask_check_d").prop('checked', false);
+                                          $("#mask_check_e").prop('checked', false);
+                                          $("#mask_check_f").prop('checked', false);
+                                          $("#mask_check_u").prop('checked', false);
+                                          $("#mask_check_o").prop('checked', false);
+                                          $("#mask_check_m").prop('checked', false);
+                                          $("#mask_check_n").prop('checked', false);
+                                          $("#mask_check_r").prop('checked', false);
+                                          $("#mask_check_q").prop('checked', false);
+                                       });
+                                   </script>
+                               </div>
+                           </div>
+                       </div>
+                   </fieldset>
+               </div>
+           </div>
+        <div class="row">
+        <div class="well bs-component">
+                <fieldset>
+                    <legend>Geocorrection</legend>
+                    <div class="form-group">
+                        <div class="col-lg-12" id="geo-correction-options">
+                            <p>A digital elevation model (DEM) is used to aid geocorrection. More information can be found about the ASTER and SRTM data from their respective websites. If uploading your own DEM file please refer <a target="_blank" href="../trac/wiki/FAQ/apldemformat">here</a> for format information.</p>
+                            <label>Select digital elevation model or upload your own</label>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios1" value="aster" checked="" onclick="radio_update('disabled')">
+                                    ASTER
+                                </label>
+                            </div>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios2" value="srtm" onclick="radio_update('disabled')">
+                                    SRTM
+                                </label>
+                            </div>
+                           <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios3" value="upload" onclick="radio_update('enabled')">
+                                    Upload my own
+                                </label>
+                                <span class="btn btn-default btn-sm btn-file" id="dem_upload_button" disabled="true">
+                                    Browse for DEM&hellip;
+                                    <input type="file" name="file" id="dem_file_upload" value"">
+                                </span>
+                                <div class="radio">
+                                   <label>
+                                       <input type="radio" name="optionsDemUploadRadios" id="optionsDemUploadRadios1" value="hdr_true" onclick="header_update('enabled')" disabled>
+                                       My DEM has a header file
+                                       <span class="btn btn-default btn-sm btn-file" id="header_upload_button" disabled="true">
+                                          Browse for hdr&hellip;
+                                          <input type="file" name="header_file" id="hdr_upload" value="">
+                                       </span>
+                                   </label>
+                                </div>
+                                <div class="radio">
+                                   <label>
+                                      <input type="radio" name="optionsDemUploadRadios" id="optionsDemUploadRadios2" value="hdr_false" onclick="header_update('disabled')" disabled>
+                                      My DEM does not have a header file
+                                   </label>
+                                </div>
+                                 <div class="radio">
+                                    <label>
+                                       <input type="radio" name="optionsDemUploadRadios" id="optionsDemUploadRadios3" value="ftp_true" onchange="uploadButtonUpdate()" disabled>
+                                       I have uploaded my file to the NERC-ARF FTP (please email the file name and details to {{ emailaddress }})
+                                    </label>
+                                 </div>
+                           </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+        <script>
+         function radio_update(setting) {
+            if (setting == "disabled") {
+               document.getElementById('optionsDemUploadRadios1').disabled=true;
+               document.getElementById('optionsDemUploadRadios2').disabled=true;
+               document.getElementById('optionsDemUploadRadios3').disabled=true;
+               document.getElementById('dem_upload_button').setAttribute("disabled", "true");
+               document.getElementById('header_upload_button').setAttribute("disabled", "true");
+            }
+            if (setting == "enabled") {
+               document.getElementById('optionsDemUploadRadios1').disabled=false;
+               document.getElementById('optionsDemUploadRadios2').disabled=false;
+               document.getElementById('optionsDemUploadRadios3').disabled=false;
+               document.getElementById('dem_upload_button').removeAttribute("disabled");
+               if (document.getElementById('optionsDemUploadRadios1').checked) {
+                  document.getElementById('header_upload_button').removeAttribute("disabled");
+               }
+            }
+            uploadButtonUpdate()
+         }
+         function header_update(setting) {
+            if (setting == "disabled") {
+               document.getElementById('header_upload_button').setAttribute("disabled", "true");
+            }
+            if (setting == "enabled") {
+               document.getElementById('header_upload_button').removeAttribute("disabled");
+            }
+            uploadButtonUpdate()
+         }
+         function uploadButtonUpdate() {
+            console.log(document.getElementById('optionsDemUploadRadios3').checked)
+            if (document.getElementById('optionsDemUploadRadios3').checked == true) {
+               document.getElementById('dem_upload_button').setAttribute("disabled", "true");
+               document.getElementById('header_upload_button').setAttribute("disabled", "true");
+            }
+            if (document.getElementById('optionsDemUploadRadios3').checked == false){
+               if (document.getElementById('optionsDemRadios3').checked == true){
+                  document.getElementById('dem_upload_button').removeAttribute("disabled");
+                  if (document.getElementById('optionsDemUploadRadios1').checked == true) {
+                     document.getElementById('header_upload_button').removeAttribute("disabled");
+                  }
+               }
+            }
+         }
+        </script>
+        <div class="row">
+            <div class="well bs-component">
+                <fieldset>
+                    <legend>Projection</legend>
+                    <div class="form-group">
+                        <div class="col-lg-12">
+                            <label>Select Projection</label>
+                            <p>Choose the output projection format or specify a PROJ.4 string. The correct UTM grid zone has been preselected for you.</p>
+                            <div class="radio">
+                                <label>
+                                    {% if utmzone %}
+                                    <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="{{ utmzone }}" {% if not uk %}checked=""{% endif %}>
+                                    {{ utmzone }}
+                                    {% else %}
+                                    <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="utm" checked="">
+                                    utm
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% if uk %}
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="UKBNG" checked="">
+                                    UKBNG
+                                </label>
+                            </div>
+                            {% endif %}
+                            <div class="radio">
+                                    <div class="form-row">
+                                        <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string" disabled="">
+                                        <label for="projStringText col-lg-3" class="control-label">Proj string</label>
+                                        <input class="form-control col-lg-3" type="text" name="projString" id="projStringText" placeholder="proj" disabled="">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+    </div>
+        <div class="col-lg-6 col-no-lr-pad">
+        <div class="col-lg-12">
+           <div class="row">
+            <div class="well bs-component">
+                <fieldset>
+                    <legend>Gridding</legend>
+                    <div class="form-group">
+                        <div class="col-lg-12">
+                            <div class="form-row">
+
+                                <p>Select the pixel size (in metres). Note that the size of pixels will affect output file size (smaller pixel size means larger file size). The optimum size based on the altitude of the data has already been selected.</p>
+				<div class="row">
+                                <label for="pixel_size_x" class="col-lg-3 control-label">Pixel Size X:</label>
+                                <div class="col-lg-3">
+                                    <select class="col-lg-3 form-control" id="pixel_size_x" name="pixel_size_x">
+                                        {% for size in pixel_sizes %}
+                                        <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <label for="pixel_size_y" class="col-lg-1 control-label">Y:</label>
+                                <div class="col-lg-3">
+                                    <select class="col-lg-3 form-control" id="pixel_size_y" name="pixel_size_y">
+                                        {% for size in pixel_sizes %}
+                                        <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                </div>
+				<div class="row">
+					<label class="col-lg-6">
+		                        	<input type="checkbox" id="pixel_check" name="pixel_check" checked=''> Square pixels
+					</label>
+				</div>
+				<script>
+				    $("#pixel_size_x").change(function () {
+					if($('#pixel_check').prop('checked') == true) {
+					    $("#pixel_size_y").val($("#pixel_size_x").val());
+					}
+				    });
+
+				    $("#pixel_size_y").change(function () {
+					if($('#pixel_check').prop('checked') == true) {
+					    $("#pixel_size_x").val($("#pixel_size_y").val());
+					}
+				    });
+
+				    $('#pixel_check').change(function () {
+				    	$("#pixel_size_y").val($("#pixel_size_x").val());
+				    });
+				</script>
+				</div>
+                            <div class="form-row">
+                                <p>&nbsp</p>
+                                <label>Bounding</label>
+                                <p>Input a bounding box for data processing (in latitude and longitude). This must be inside the data coverage area. Default values cover the full flightline area so only change this if you want to subset the data.</p>
+                                <div class="row">
+                                    <label for="bound_n" class="col-lg-1 control-label">N:</label>
+                                    <div class="col-lg-5" id="bound_n_cont">
+                                        <input type="number" pattern="[1-9]" step="0.00001" class="form-control" id="bound_n" name="bound_n" onblur="checkBoundingText(this)" value={{ bounds.n }} >
+                                    </div>
+                                    <label for="bound_s" class="col-lg-1 control-label">S:</label>
+                                    <div class="col-lg-5" id="bound_s_cont">
+                                        <input type="number" pattern="[1-9]" step="0.00001"  class="form-control" id="bound_s" name="bound_s" onblur="checkBoundingText(this)" value={{ bounds.s }}>
+                                    </div>
+                                    <label for="bound_e" class="col-lg-1 control-label">E:</label>
+                                    <div class="col-lg-5" id="bound_e_cont">
+                                        <input type="number" pattern="[1-9]" step="0.00001"  class="form-control" id="bound_e" name="bound_e" onblur="checkBoundingText(this)" value={{ bounds.e }}>
+                                    </div>
+                                    <label for="bound_w" pattern="[1-9]" class="col-lg-1 control-label">W:</label>
+                                    <div class="col-lg-5" id="bound_w_cont">
+                                        <input type="number" pattern="[1-9]" step="0.00001" class="form-control" id="bound_w" name="bound_w" onblur="checkBoundingText(this)" value={{ bounds.w }}>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                &nbsp
+                            </div>
+                            <div class="row">
+                                <label class="col-lg-4 control-label">Select interpolation</label>
+                            </div>
+                                <p>More information on the algorithms available can be found <a target="_blank" href="../trac/wiki/Processing/AplUserGuide">here</a> under information on interpolation methods.</p>
+                            <div class="row">
+                                <div class="col-lg-4">
+                                <div class="radio" id="interp_radios">
+                                    <label>
+                                        <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="nearest" checked="">
+                                        Nearest neighbour
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="bilinear">
+                                        Bilinear
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="cubic">
+                                        Cubic
+                                    </label>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            </div>
+               <div class="row">
+                  <div class="well bs-component">
+                     <input type="hidden" name="julianday" value="{{ julian_day }}">
+                     <input type="hidden" name="sortie" value="{{ sortie }}">
+                     <input type="hidden" name="year" value="{{ year }}">
+                     <input type="hidden" name="project" value="{{ project_code }}">
+                     <p>When you click the submit button an email will be sent asking for confirmation of your data order. Processing will not proceed until this link has been clicked and the request confirmed.</p>
+                     <p>Click reset to undo all changes<p>
+                     <p><input type="checkbox" name="bandratio" id="bandratio">I want to perform bandmath/band ratioing</input></p>
+                     <button type="reset" value="Reset" class="btn btn-default">Reset</button>
+                     <button id="submit" type="submit" class="btn btn-default align-right">Submit</button>
+                  </div>
+               </div>
+            </div>
+    </div>
+    </div>
+</form>
+<script>
+    function checkEmailField(field) {
+        if (field.value == '') {
+            $('#email_section').addClass('has-warning');
+        } else if (field.value != '') {
+            $('#email_section').removeClass('has-warning');
+        }
+        if (field.value.indexOf(".") == -1 || field.value.indexOf("@") == -1) {
+            $('#email_section').addClass('has-error');
+        } else if (field.value.indexOf(".") != -1 && field.value.indexOf(".") != -1){
+            $('#email_section').removeClass('has-error');
+        }
+    }
+
+    function checkBoundingText(field) {
+        if (isNaN(field.value) == true || field.value == '') {
+            document.getElementById(field.id + '_cont').classList.add('has-error');
+        } else if (isNaN(field.value) != true) {
+            document.getElementById(field.id + '_cont').classList.remove('has-error');
+            if (field.id.indexOf('bound_n') != -1 || field.id.indexOf('bound_s') != -1) {
+                if (parseFloat(document.getElementById('bound_n').value) < parseFloat(document.getElementById('bound_s').value)) {
+                    document.getElementById('bound_n' + '_cont').classList.add('has-error');
+                    document.getElementById('bound_s' + '_cont').classList.add('has-error');
+                } else if (parseFloat(document.getElementById('bound_n').value) > parseFloat(document.getElementById('bound_s').value)) {
+                    document.getElementById('bound_n' + '_cont').classList.remove('has-error');
+                    document.getElementById('bound_s' + '_cont').classList.remove('has-error');
+                }
+            } else if (field.id.indexOf('bound_e') != -1 || field.id.indexOf('bound_w') != -1) {
+                if (parseFloat(document.getElementById('bound_e').value) < parseFloat(document.getElementById('bound_w').value)) {
+                    document.getElementById('bound_w' + '_cont').classList.add('has-error');
+                    document.getElementById('bound_e' + '_cont').classList.add('has-error');
+                } else if (parseFloat(document.getElementById('bound_e').value) > parseFloat(document.getElementById('bound_w').value)) {
+                    document.getElementById('bound_w' + '_cont').classList.remove('has-error');
+                    document.getElementById('bound_e' + '_cont').classList.remove('has-error');
+                }
+            }
+        }
+    }
+
+    function checkBandValue(band1, band2) {
+        if (document.getElementById(band1).selectedIndex >= document.getElementById(band2).selectedIndex) {
+            document.getElementById(band2).selectedIndex = document.getElementById(band1).selectedIndex;
+        }
+    }
+
+   $( '#optionsDemUploadRadios3' ).change()
+
+   function validateForm(event) {
+       var at_least_one = false;
+       $('#line_checks_container input[type=checkbox]').each(function() {
+           if (this.checked) {
+               at_least_one = true;
+           }
+       });
+       if (document.getElementById("optionsDemRadios3").checked == true) {
+           var dems = true
+           if (document.getElementById("optionsDemUploadRadios3").checked == false) {
+              if (document.getElementById("dem_file_upload").value == "") {
+                  event.returnValue = false;
+                  var errordiv = document.createElement('div');
+                  errordiv.id = "tableerror"
+                  errordiv.className = "alert alert-dismissable alert-danger";
+                  errordiv.innerHTML = '<button type="button" class="close" data-dismiss="alert">×</button><strong>You have indicated you want to upload a dem but have not selected a file to upload, please choose one and try again</strong>'
+                  document.getElementById("geo-correction-options").appendChild(errordiv)
+                  return false;
+              }
+              if (document.getElementById("optionsDemUploadRadios1").checked == true) {
+                  if (document.getElementById("hdr_upload").value == "") {
+                      event.returnValue = false;
+                      var errordiv = document.createElement('div');
+                      errordiv.id = "tableerror"
+                      errordiv.className = "alert alert-dismissable alert-danger";
+                      errordiv.innerHTML = '<button type="button" class="close" data-dismiss="alert">×</button><strong>You have indicated you want to upload a header but have not selected a file to upload, please choose one and try again</strong>'
+                      document.getElementById("geo-correction-options").appendChild(errordiv)
+                      return false;
+                  }
+              }
+           }
+       }
+       if (at_least_one == true) {
+           event.returnValue = true;
+           return true;
+       } else {
+           event.returnValue = false;
+           var errordiv = document.createElement('div');
+           errordiv.id = "tableerror"
+           errordiv.className = "alert alert-dismissable alert-danger";
+           errordiv.innerHTML = '<button type="button" class="close" data-dismiss="alert">×</button><strong>Please select at least one line!</strong>'
+           document.getElementById("line_checks_div").appendChild(errordiv)
+           return false;
+       }
+   }
+</script>
+{% endblock %}

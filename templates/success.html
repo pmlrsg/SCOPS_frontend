@@ -1,0 +1,15 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="../static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+    <div class="row well bs-component">
+        <h1>Processing</h1>
+        Your request has been successfully amended. The processing will restart soon.
+    </div>
+{% endblock %}

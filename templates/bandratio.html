@@ -1,0 +1,146 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type='text/javascript'>
+    if (org) {
+      alert("org already defined, could not set options");
+    } else {
+      var org = { mathdox: { formulaeditor: { options: {
+        fontSize : 207,
+        indentXML : true,
+        useBar: false,
+        styleArith1Times: "cross",
+        onloadFocus: "formula1",
+        paletteStyle: "border : 2px solid #99F; vertical-align : middle; cursor : text; padding : 0px; background-color : white; float : right;",
+        inputStyle: "border : 1px solid #99F; vertical-align : middle; cursor : text; padding : 0px; float:left;",
+        paletteURL: "{{ url_for('static', filename='js/formulaeditor/org/mathdox/formulaeditor/palette2.xml') }}"
+      }}}};
+    }
+</script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bandratio.js') }}"></script>
+<script type='text/javascript' src="{{ url_for('static', filename='js/formulaeditor/org/mathdox/formulaeditor/main.js') }}"></script>
+<script>
+   $(document).ready(function(){
+       console.log('ready');
+   });
+</script>
+{% endblock %}
+{% block content %}
+<div class="row">
+   &nbsp
+</div>
+<div class="row">
+   <div class="col-lg-7">
+      <div class="well bs-component">
+         <div class="row">
+            <h4>Create Equation</h4>
+            <p>Here you can create an equation to operate on the hyperspectral data. You can also use one of the pre-defined equations on the right in the 'equation list'. When you have created the equation that you wish to use you must give it a name and click the "save equation" button. If this is successful, your equation should be listed in the flightlines section below. For a guide on using the equation editor please click the help button.<p>
+         </div>
+         <div class="row" id="formulacontainer" name="formulacontainer" style="overflow:auto">
+            <p>
+               <textarea class='mathdoxformula mathdoxpalette' id="formula1" rows="10" cols="80"></textarea>
+            </p>
+         </div>
+         <div id="eq_name_container" class="row">
+            <label for="eq_name" class="control-label">Name:</label>
+            <input type="text" class="form-control" id="eq_name" onblur="document.getElementById('eq_name_container').className = document.getElementById('eq_name_container').className.replace(/(\s|^)has-error(\s|$)/, '')" placeholder="Equation name" data-container="body" data-toggle="popover" data-placement="top" data-content="Please input an equation name." data-original-title="" title=""></input>
+         </div>
+         &nbsp
+         <div class="row">
+            Insert band: <select id="bandselector" class="form-control">
+            {% for band in bands %}
+            <option value={{ band.band_main }}>{{ band.band_full }}</option>
+            {% endfor %}
+            </select>
+            <button type="button" class="btn btn-default" name="insert" id="insert" onclick="band_input(document.getElementById('bandselector').value)">insert</button>
+         </div>
+         &nbsp
+         <div class="row">
+            <button class="btn btn-default" onclick="alert(document.getElementById('formula1').value)"> export as mathml</button>
+            <button class="btn btn-default" onclick="alert(stringifyMathML(org.mathdox.formulaeditor.FormulaEditor.getEditorByTextArea('formula1').getMathML()))">export as string</button>
+            <button class="btn btn-default" onclick="add_eq(document.getElementById('formula1').value)">Save equation</button>
+            <button class="btn btn-default" onclick="new_eq()">New equation</button>
+         </div>
+      </div>
+   </div>
+   <div class="col-lg-5">
+      <div class="well bs-component">
+         <div class="row">
+            <h4>Equation List</h4>
+         </div>
+         <div class="row">
+            <div class="list-group" id="eq_list">
+              {% for eqn in equationlist %}
+              <a href="#" class="list-group-item" id="{{eqn.name}}">
+                <h5 class="list-group-item-heading">{{eqn.name}}</h5>
+                <div style="display:none" class="mathml"><math xmlns="http://www.w3.org/1998/Math/MathML">{{eqn.asMathML|safe}}</math></div>
+              </a>
+              {% endfor %}
+            </div>
+            <script>
+            $("#eq_list").on('click', '.list-group-item', function(e) {
+               if (($(e.target).hasClass("active")) || ($(e.target).parent().hasClass("active"))) {
+                  $(e.target).removeClass("active");
+                  $(e.target).parent().removeClass("active");
+               } else {
+                  $(".list-group .list-group-item").removeClass("active");
+                  if ($(e.target).is('h5')) {
+                     $(e.target).parent().addClass("active");
+                  } else {
+                     $(e.target).addClass("active");
+                  }
+               }
+            });
+            </script>
+         </div>
+         <div class="row">
+            <button class="btn btn-default" onclick="edit_eq()">edit</button>
+            <button class="btn btn-default" onclick="remove_eq()">remove</button>
+         </div>
+      </div>
+   </div>
+</div>
+<div class="row">
+   <div class="col-lg-12">
+      <form class="form-horizontal" action="req" method="post" enctype="multipart/form-data">
+         <div class="well bs-component">
+            <div class="row">
+               <h4>Flightlines</h4>
+               <p>Please select which algorithms you would like to be applied to each flightline. The selection boxes directly below allow you to apply the named equation to all flightlines.</p>
+               <div id="algorithm_all_checks" onclick="all_check()">
+                  {% for eqn in equationlist %}
+                  <label id="{{eqn.name}}_label">
+                     <input type="checkbox" id="{{eqn.name}}"> {{eqn.name}}
+                  </label>
+                  {% endfor %}
+               </div>
+               &nbsp
+               <div class="list-group" id="line_list" style="height:35vh; overflow:auto">
+                  {% for line in lines %}
+                    <div class="list-group-item">
+                       <h4 class="list-group-item-heading">{{line.name}}</h4>
+                       {% for eqn in equationlist %}
+                       <label id="{{eqn.name}}_label">
+                          <input type="checkbox" id="{{line.name}}_{{eqn.name}}" name="{{line.name}}_{{eqn.name}}"> {{eqn.name}}
+                       </label>
+                      {% endfor %}
+                    </div>
+                  {% endfor %}
+               </div>
+               <input type="hidden" name="source" value="{{ configfile }}">
+               <input type="hidden" name="lev1_mapped" value="lev1">
+               <input type="hidden" name="project" value="{{ project }}"
+               <div id="equations">
+                  {% for eqn in equationlist %}
+                  <input type="hidden" name="equation_flag_{{eqn.name}}" id="equation_flag_{{eqn.name}}" value="{{eqn.asString}}">
+                  {% endfor %}
+               </div>
+               <div class="row">
+                  <button type="submit" class="btn btn-default align-right">Submit</button>
+               </div>
+            </div>
+         </div>
+      </form>
+   </div>
+</div>
+{% endblock %}

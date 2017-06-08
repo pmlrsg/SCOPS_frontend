@@ -1,0 +1,93 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="../static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+   <div class="row well bs-component">
+      <form class="form-horizontal" action="upload" method="post" enctype="multipart/form-data">
+         <h1>Re-upload your DEM</h1>
+         After attempting to process your request it appears there was an issue with your DEM. The problem is outlined below:
+         <h2>Issue details</h2>
+         <p>{{ issue.details }}</p>
+
+         <p>To resolve this issue you can either (a) upload a corrected DEM or (b) let our system produce a DEM for you from either ASTER or SRTM data.</p>
+         <div class="col-sm-6">
+            <h3>Upload my own</h3>
+            <div class="radio">
+               <label>
+                  <input type="radio" name="optionsDemRadios" id="optionsDemRadios3" value="upload" onclick="radio_update('enabled')" checked="">
+                  Upload my DEM
+               </label>
+               <span class="btn btn-default btn-sm btn-file" id="dem_upload_button">
+                  Browse for DEM&hellip;
+                  <input type="file" name="file" id="dem_file_upload" value"">
+               </span>
+               <div class="radio">
+                  <label>
+                     <input type="radio" name="optionsDemUploadRadios" id="optionsDemUploadRadios1" value="hdr_true" onclick="header_update('enabled')" checked="">
+                     My DEM has a header file
+                     <span class="btn btn-default btn-sm btn-file" id="header_upload_button">
+                        Browse for hdr&hellip;
+                        <input type="file" name="header_file" id="hdr_upload" value="">
+                     </span>
+                  </label>
+               </div>
+               <div class="radio">
+                  <label>
+                     <input type="radio" name="optionsDemUploadRadios" id="optionsDemUploadRadios2" value="hdr_false" onclick="header_update('disabled')">
+                     My DEM does not have a header file
+                  </label>
+               </div>
+            </div>
+         </div>
+         <div class="col-sm-6">
+            <h3>Produce a DEM for me</h3>
+            <div class="radio">
+               <label>
+               <input type="radio" name="optionsDemRadios" id="optionsDemRadios1" value="aster" onclick="radio_update('disabled')">
+               ASTER
+               </label>
+            </div>
+            <div class="radio">
+               <label>
+                  <input type="radio" name="optionsDemRadios" id="optionsDemRadios2" value="srtm" onclick="radio_update('disabled')">
+                  SRTM
+               </label>
+            </div>
+         </div>
+      <input type="hidden" name="proj" id="proj" value="{{ issue.projfolder }}">
+      <button type="submit" id="submit" class="btn btn-primary align-right">Submit</button>
+      </form>
+         <script>
+         function radio_update(setting) {
+            if (setting == "disabled") {
+               document.getElementById('optionsDemUploadRadios1').disabled=true;
+               document.getElementById('optionsDemUploadRadios2').disabled=true;
+               document.getElementById('dem_upload_button').setAttribute("disabled", "true");
+               document.getElementById('header_upload_button').setAttribute("disabled", "true");
+
+            }
+            if (setting == "enabled") {
+               document.getElementById('optionsDemUploadRadios1').disabled=false;
+               document.getElementById('optionsDemUploadRadios2').disabled=false;
+               document.getElementById('dem_upload_button').removeAttribute("disabled")
+               if (document.getElementById('optionsDemUploadRadios1').checked) {
+                  document.getElementById('header_upload_button').removeAttribute("disabled")
+               }
+            }
+         }
+         function header_update(setting) {
+            if (setting == "disabled") {
+               document.getElementById('header_upload_button').setAttribute("disabled", "true");
+            }
+            if (setting == "enabled") {
+               document.getElementById('header_upload_button').removeAttribute("disabled")
+            }
+         }
+         </script>
+{% endblock %}

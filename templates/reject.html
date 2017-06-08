@@ -1,0 +1,21 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="bs-component">
+            <div class="well bs-component">
+                <title>Something went wrong!</title>
+                <p>
+                    Unfortunately something went wrong whilst validating your request. Please try again and if this error occurs more than once email us at {{ emailaddress }}.
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

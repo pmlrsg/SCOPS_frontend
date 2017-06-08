@@ -1,0 +1,15 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="../static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+{% endblock %}
+{% block content %}
+    <div class="row well bs-component">
+        <h1>Processing</h1>
+        Your job has been successfully submitted. Please remember to check your email inbox for the confirmation link as processing will not progress until the link has been clicked. The confirmation link should redirect you to the confirmation page.
+    </div>
+{% endblock %}

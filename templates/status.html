@@ -1,0 +1,81 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="../static/js/jquery.js"></script>
+<script src="../static/js/ol.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/status.js') }}"></script>
+{% endblock %}
+{% block content %}
+   <div class="row">
+      &nbsp
+   </div>
+   <script>
+      window.setInterval(update_status, 10000, "{{ projfolder }}", "{{ project_code }}");
+   </script>
+   <div class="row">
+    <div class="bs-component">
+        <div class="well bs-component">
+            <h1>Processing status<a href="{{ all_download }}" class="pull-right btn btn-sm btn-primary {% if all_complete %}active{% else %}disabled{% endif %}">Download all</a></h1>
+            <div class="list-group" style="height: 500px; overflow-y:auto;">
+            {% for line in lines %}
+            <div class="list-group-item" id="{{ lines[line].name }}_main">
+               <div class="list-group-item-heading">
+                  <div class="row">
+                     <div class="col-sm-4">
+                        <h4>{{ lines[line].name }}</h4>
+                     </div>
+                     <div class="col-sm-4">
+                        <h4 class="text-center" id="{{ lines[line].name }}_status_ind">{% if not lines[line].flag %}Stage: {{ lines[line].stage }}{% else %}ERROR: {{ lines[line].stage }}{% endif %}</h4>
+                     </div>
+                     <div class="col-sm-4">
+                        <h4 class="text-right" id="{{ lines[line].name }}_file_size">Unzipped size: {{ lines[line].filesize }} {{ lines[line].bytesize }}</h4>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-sm-12">
+                        <div class="progress progress-striped {% if not lines[line].flag and not lines[line].stage in "Complete" %}active{% endif %}" id="{{ lines[line].name }}_progress_bar">
+                          <div class="progress-bar  {% if lines[line].flag %}progress-bar-danger{% endif %}" style="width: {{ lines[line].progress }}%;" id="{{ lines[line].name }}_progress_indicator"></div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-sm-10">
+                        <h5 class="text-right" id="{{ lines[line].name }}_compressed_size">Compressed download size: {{ lines[line].zipsize }} {{ lines[line].zipbyte }}</h5>
+                     </div>
+                     <div class="col-sm-2">
+                        <a href="{{ lines[line].link }}" class="pull-right btn btn-sm btn-primary {% if not lines[line].stage in 'Complete' %}disabled{% else %}active{% endif %}" id="{{ lines[line].name }}_download_btn">Download</a>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            {% endfor %}
+         </div>
+      </div>
+        <div class="well bs-component">
+           <div class="row">
+             <div class="col-lg-12">
+                <div class="panel panel-info">
+                  <div class="panel-heading" data-target="#process_details_table">
+                     Processing request details
+                  </div>
+                  <table id="process_details_table" class="table table-striped table-hover table-fixed panel-body">
+                     <tr><td>projection</td><td>{{ processing_details.projection }}</td></tr>
+                     <tr><td>pixel size</td><td>{{ processing_details.pixel_size }}</td></tr>
+                     <tr><td>bounds</td><td>{{ processing_details.bounds }}</td></tr>
+                     <tr><td>interpolation</td><td>{{ processing_details.interpolation }}</td></tr>
+                     <tr><td>projstring</td><td>{{ processing_details.projstring }}</td></tr>
+                     <tr><td>dem</td><td>{{ processing_details.dem }}</td></tr>
+                     {% for equation in processing_details.equations %}
+                     <tr><td>{{ equation[0] }}</td><td>{{ equation[1] }}</td></tr>
+                     {% endfor %}
+                  </table>
+               </div>
+             </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
