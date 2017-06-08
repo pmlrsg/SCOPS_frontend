@@ -5,7 +5,7 @@ hyperspectral data in SCOPS. Built in Flask Python with bootstrap used for the
 CSS.
 
 For data processing the backend script are required, these are hosted in a 
-separate repository.
+separate repository https://github.com/pmlrsg/SCOPS_processing.
 
 Developed by the NERC Airborne Research Facility Data Analysis Node 
 NERC-ARF-DAN (https://nerc-arf-dan.pml.ac.uk/)
