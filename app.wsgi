@@ -5,7 +5,7 @@
 ###########################################################
 
 import sys
-sys.path.insert(0, '/home/rsgadmin/arsf-dan.nerc.ac.uk/web_process_app/')
+sys.path.insert(0, '/home/rsgadmin/nerc-arf-dan.pml.ac.uk/web_process_app/')
 sys.path.insert(0, '/users/rsg/arsf/usr/lib/python/site-packages')
 sys.path.insert(0, '/users/rsg/arsf/usr/bin')
 sys.path.insert(0, '/users/rsg/arsf/usr/lib_python_links')
