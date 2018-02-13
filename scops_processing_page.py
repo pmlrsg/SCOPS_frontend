@@ -31,6 +31,10 @@ from werkzeug.utils import secure_filename
 from arsf_dem import dem_nav_utilities
 from arsf_dem import grass_library
 
+import db_testing
+import legacy_functions
+import support_functions
+
 # Try to import NERC-ARF version of web_functions first.
 try:
     from common_arsf.web_functions import requires_auth, send_email
@@ -263,166 +267,55 @@ def kml_page(name=None):
 @app.route('/jobrequest', methods=['GET', 'POST'])
 @requires_auth
 def job_request(name=None, errors=None):
-    """
-    Receives a request from html with the day, year and required project code
-    then returns a request page based on the data it finds in the proj dir
-
-    :param name: placeholder
-    :type name: str
-
-    :return: job request html page
-    :rtype: html
-    """
-    try:
-        # input validation, test if these are numbers
-        if not math.isnan(float(request.args["day"])):
-            day = request.args["day"]
-        else:
-            raise
-        if not math.isnan(float(request.args["year"])):
-            year = request.args["year"]
-        else:
-            #if they aren't there is something wrong with the request
-            raise
-
-        # input validation, get rid of any potential paths the user may have used
-        #it's used later on for file operations so we should make sure it is safe.
-        proj_code = request.args["project"].replace("..", "_").replace("/", "_")
-
-        # check if theres a sortie associated with the day
-        try:
-            sortie = request.args["sortie"]
-        except:
-            #if there isn't ignore it
-            sortie = None
-
-        # Need to add a 0 or two to day if it isn't long enough
-        day = str(day)
-
-        # need to convert day to 00# or 0## for string stuff
-        if len(day) == 1:
-            day = "00" + day
-        elif len(day) == 2:
-            day = "0" + day
-
-        # check if the symlink for this day/year/proj code combo exists
-        if sortie is None:
-            symlink_name = proj_code + '-' + year + '_' + day
-            app.logger.info("sortie is none")
-        else:
-            symlink_name = proj_code + '-' + year + '_' + day + sortie
-
-        # this should (should) be where the kml is on web server, makes it annoying to test locally though
-        path_to_symlink = SYMLINK_PATH + '/' + year + "/" + symlink_name
-        #in case we ever want to know what symlinks have been accessed...
-        app.logger.info("location = " + path_to_symlink)
-        if os.path.exists(path_to_symlink):
-            app.logger.info(os.path.realpath(path_to_symlink))
-            folder = "/" + os.path.realpath(path_to_symlink).replace("/processing/kml_overview", '')
-        else:
-            #this shouldn't fail, but there's always a chance
-            raise
-    except:
-        #if there has been an error return an informative error then bail
-        return render_template("404.html",
-                               title="Project not found!",
-                               Error="The project you asked for does not seem to exist, check the link and try again.",
-                               emailaddress=SEND_EMAIL)
-
-    try:
-        app.logger.info("folder = " + folder)
-        hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
-        app.logger.info(hyper_delivery)
-    except:
-        #if the hyperspectral delivery doesn't exist then we either haven't finished processing it or there is no
-        # hyperspectral data available. The user can't access it.
-        return render_template("404.html",
-                               title="Delivery not found!",
-                               Error="The delivery for this dataset could not be found, have you received confirmation of processing completion?",
-                               emailaddress=SEND_EMAIL)
-
-    # using the xml find the project bounds
-    try:
-        projxml = Etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
-    except:
-        return render_template("404.html",
-                               title="Delivery not found!",
-                               Error="The delivery for this dataset could not be found, have you received confirmation of processing completion?",
-                               emailaddress=SEND_EMAIL)
-    #This is kind of gross but it's the best way to grab the full project bounds quickly, another option may be grabbing from the mapped header files
-    bounds = {
-       'n': projxml.find('.//{http://www.isotc211.org/2005/gmd}northBoundLatitude').find(
-          '{http://www.isotc211.org/2005/gco}Decimal').text,
-       's': projxml.find('.//{http://www.isotc211.org/2005/gmd}southBoundLatitude').find(
-          '{http://www.isotc211.org/2005/gco}Decimal').text,
-       'e': projxml.find('.//{http://www.isotc211.org/2005/gmd}eastBoundLongitude').find(
-          '{http://www.isotc211.org/2005/gco}Decimal').text,
-       'w': projxml.find('.//{http://www.isotc211.org/2005/gmd}westBoundLongitude').find(
-          '{http://www.isotc211.org/2005/gco}Decimal').text
-    }
-
-    #TODO have per line bounds so the bounding box can be reduced intelligently
-
-    # get the utm zone
-    utmzone = latlon_to_utm(float(bounds["n"]), float(bounds["e"]))
-
-    # if it's britain we should offer UKBNG on the web page
-    if utmzone[0] in [29, 30, 31] and utmzone[1] in 'N':
-        britain = True
+    if support_functions.LEGACY_PAGE_GEN:
+        render = legacy_functions.legacy_job_request(request,
+                                                     name,
+                                                     errors)
+        return render
+    # input validation, test if these are numbers
+    if not math.isnan(float(request.args["day"])):
+        day = request.args["day"]
     else:
-        britain = False
+        raise
+    if not math.isnan(float(request.args["year"])):
+        year = request.args["year"]
+    else:
+        #if they aren't there is something wrong with the request
+        raise
 
-    # begin building the lines for output
-    line_hdrs = [f for f in glob.glob(hyper_delivery[0] + '/flightlines/level1b/*.bil.hdr') if "mask" not in f]
-    lines = []
-    for line in line_hdrs:
-        linehdr = hdr_reader(line)
-        waves = linehdr['Wavelength']
-        bands=[]
-        for enum, band in enumerate(waves):
-            bands.append({"band_main": (enum + 1),
-                          "band_full": str(enum+1)+"("+str(band)+"nm)"})
-        linedict = {
-           "name": os.path.basename(line)[:-10],
-           "bandsmax": int(linehdr['bands']),
-           "bands": bands
-        }
-        lines.append(linedict)
+    # input validation, get rid of any potential paths the user may have used
+    #it's used later on for file operations so we should make sure it is safe.
+    #bit of an abuse of the secure filename function, but for its intent this is basically a filename
+    proj_code = secure_filename(request.args["project"])
 
-    # grab 2 random flightlines for sampling of altitude, any more is going to cause problems with speed
-    #need this for the pixel size guesstimation
-    sampled_nav = random.sample(glob.glob(hyper_delivery[0] + "/flightlines/navigation/*_nav_post_processed.bil"), 2)
+    # check if theres a sortie associated with the day
+    try:
+        sortie = request.args["sortie"]
+    except:
+        #if there isn't ignore it
+        sortie = None
 
-    # we should base pixel size off the minimum
-    altitude = dem_nav_utilities.get_min_max_from_bil_nav_files(sampled_nav)["altitude"]["min"]
+    # sql injection stuff is handled within these functions
+    project = db_testing.get_project_from_db(year,
+                                             day,
+                                             sortie,
+                                             proj_code)
 
-    # for the moment just using fenix
-    sensor = "fenix"
+    lines = db_testing.get_project_flights(project["id"])
 
-    # calculate pixelsize
-    pixel = pixelsize(altitude, sensor)
-
-    # round it to .5 since we don't need greater resolution than this
-    pixel = round(pixel * 2) / 2
-
-    # sort the lines so they look good on the web page
-    lines = sorted(lines, key=lambda line: line["name"])
-
-    # creates the webpage by handing vars into the template engine
+    #spit out a new web page
     return render_template('requestform.html',
-                           emailaddress=SEND_EMAIL,
                            flightlines=lines,
-                           uk=britain,
-                           pixel_sizes=PIXEL_SIZES,
-                           optimal_pixel=pixel,
-                           bounds=bounds,
+                           uk=project["uk"],
+                           pixel_sizes=support_functions.PIXEL_SIZES,
+                           optimal_pixel=project["optimal_pixel"],
+                           bounds={'n': project["north"], 's': project["south"], 'e': project["east"],'w': project["west"]},
                            name=name,
-                           julian_day=day,
-                           year=year,
-                           sortie=sortie,
-                           project_code=proj_code,
-                           utmzone="UTM zone " + str(utmzone[0]) + str(utmzone[1]))
-
+                           julian_day=project["julian_day"],
+                           year=project["year"],
+                           sortie=project["sortie"],
+                           project_code=project["project_code"],
+                           utmzone=project["utmzone"])
 
 @app.route('/progress', methods=['POST'])
 @requires_auth
@@ -505,22 +398,14 @@ def submitted():
 
 
 def config_output(requestdict, lines, filename, dem_name=None):
-    """
-    Writes a config to the web processing configs folder, this will then be picked up by web_qsub
+    if support_functions.LEGACY_PAGE_GEN:
+        out = legacy_functions.legacy_config_output(requestdict, lines, filename, dem_name=None)
+        return out
 
-    :param requestdict: A request converted to immutable dict from the job request page
-    :type requestdict: immutable dict
-
-    :param lines: list of flightlines to be processed
-    :type lines: list
-
-    :param filename: config filename to write to
-    :type filename: str
-
-    :return: 1 on success
-    :rtype: int
-    """
     config = ConfigParser.SafeConfigParser()
+
+    project = db_testing.get_project_from_db(requestdict["year"], requestdict["julianday"], requestdict["sortie"], requestdict["project"])
+
     #build the default section
     config.set('DEFAULT', "julianday", requestdict["julianday"])
     config.set('DEFAULT', "year", requestdict["year"])
@@ -528,19 +413,7 @@ def config_output(requestdict, lines, filename, dem_name=None):
     config.set('DEFAULT', "project_code", requestdict["project"])
     config.set('DEFAULT', "projection", requestdict["projectionRadios"])
 
-    if requestdict["sortie"] in "None":
-        symlink_name = requestdict["project"] + '-' + requestdict["year"] + '_' + requestdict["julianday"]
-        app.logger.info("sortie is none")
-    else:
-        symlink_name = requestdict["project"] + '-' + requestdict["year"] + '_' + requestdict["julianday"] + requestdict["sortie"]
-
-    # this should (should) be where the kml is on web server, makes it annoying to test locally though
-    path_to_symlink = SYMLINK_PATH + '/' + requestdict["year"] + "/" + symlink_name
-    #in case we ever want to know what symlinks have been accessed...
-    app.logger.info("location = " + path_to_symlink)
-    if os.path.exists(path_to_symlink):
-        app.logger.info(os.path.realpath(path_to_symlink))
-        folder = "/" + os.path.realpath(path_to_symlink).replace("/processing/kml_overview", '')
+    folder = project["folder"]
 
     config.set('DEFAULT', 'sourcefolder', folder)
     try:
@@ -616,12 +489,15 @@ def config_output(requestdict, lines, filename, dem_name=None):
             config.set(str(line), 'process', 'false')
         config.set(str(line), 'band_range',
                    requestdict["%s_band_start" % line] + '-' + requestdict["%s_band_stop" % line])
+    if support_functions.SKIP_CONFIRMATION:
+        config.set('DEFAULT', "confirmed", "True")
     #write it out
-    configfile = open(CONFIG_OUTPUT + filename + '.cfg', 'w')
+    configfile = open(os.path.join(support_functions.CONFIG_OUTPUT, filename + '.cfg'), 'w')
     try:
         config.write(configfile)
-        os.chmod(CONFIG_OUTPUT + filename + '.cfg', 0666)
-        confirm_email(filename, requestdict["project"], requestdict["email"])
+        os.chmod(os.path.join(support_functions.CONFIG_OUTPUT, filename + '.cfg'), 0666)
+        if not support_functions.SKIP_CONFIRMATION:
+            support_functions.confirm_email(filename, requestdict["project"], requestdict["email"])
         return filename
     except Exception as e:
         return 0
@@ -772,8 +648,12 @@ def statuspage(projfolder):
 @app.route('/bandratio/<configfile>', methods=['GET'])
 @requires_auth
 def bandratiopage(configfile):
+    if support_functions.LEGACY_PAGE_GEN:
+        out = legacy_functions.bandratiopage(configfile)
+        return out
+
     config_file = ConfigParser.SafeConfigParser()
-    config_file.read(CONFIG_OUTPUT + configfile + ".cfg")
+    config_file.read(os.path.join(support_functions.CONFIG_OUTPUT, configfile + ".cfg"))
     lines = []
     for section in config_file.sections():
         lines.append({ "name": section})
@@ -781,34 +661,20 @@ def bandratiopage(configfile):
         sortie = config_file.get('DEFAULT', 'sortie')
     except ConfigParser.NoOptionError:
         sortie = None
-    if sortie == "None":
-        sortie=''
-    try:
-        symlink_name = config_file.get('DEFAULT', 'project_code') + '-' +  config_file.get('DEFAULT', 'year') + '_' + config_file.get('DEFAULT', 'julianday') + sortie
-    except ConfigParser.NoOptionError:
-        #if this hasn't worked we need to abort because the configfile cannot exist
-        abort(404)
 
-    # this should (should) be where the kml is on web server, makes it annoying to test locally though
-    path_to_symlink = SYMLINK_PATH + '/' + config_file.get('DEFAULT', 'year') + "/" + symlink_name
-    folder = "/" + os.path.realpath(path_to_symlink).replace("/processing/kml_overview", '')
-    hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
-    linehdrpath = [f for f in glob.glob(hyper_delivery[0] + '/flightlines/level1b/*.bil.hdr') if "mask" not in f][0]
-    linehdr = hdr_reader(linehdrpath)
-    bands = linehdr['Wavelength']
-    bands_fixed = []
-    #TODO FIXME
-    #these equations need updating depending on how many bands the input file has
+    project = db_testing.get_project_from_db(config_file.get('DEFAULT', 'year'), config_file.get('DEFAULT', 'julianday'), sortie, config_file.get('DEFAULT', 'project_code'))
+    lines = db_testing.get_project_flights(project["id"])
+
+    bands = lines[0]["bands"]
+
     equationlist = [{'name' : 'ndvi','asString' : '(band253-band170)/(band253+band170)','asMathML' : '<mfrac><mrow><mi>band253</mi><mo>-</mo><mi>band170</mi></mrow><mrow><mi>band253</mi><mo>+</mo><mi>band170</mi></mrow></mfrac>' },
                     {'name' : 'ndbi','asString' : '(band460-band253)/(band460+band253)','asMathML' : '<mfrac><mrow><mi>band460</mi><mo>-</mo><mi>band253</mi></mrow><mrow><mi>band460</mi><mo>+</mo><mi>band253</mi></mrow></mfrac>'},
                     {'name' : 'ndwi','asString' : '(band281-band396)/(band281+band396)','asMathML' : '<mfrac><mrow><mi>band281</mi><mo>-</mo><mi>band396</mi></mrow><mrow><mi>band281</mi><mo>+</mo><mi>band396</mi></mrow></mfrac>'}]
-    for enum, band in enumerate(bands):
-        bands_fixed.append({'band_main':"band"+str(enum+1),
-                            'band_full':"band"+str(enum+1)+"("+str(band)+"nm)"})
+
     return render_template('bandratio.html',
                             lines=lines,
                             equationlist=equationlist,
-                            bands=bands_fixed,
+                            bands=bands,
                             configfile=configfile,
                             project=config_file.get('DEFAULT', 'project_code'))
 
