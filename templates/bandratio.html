@@ -108,11 +108,22 @@
                <h4>Flightlines</h4>
                <p>Please select which algorithms you would like to be applied to each flightline. The selection boxes directly below allow you to apply the named equation to all flightlines.</p>
                <div id="algorithm_all_checks" onclick="all_check()">
+                  <p> Equations:
                   {% for eqn in equationlist %}
                   <label id="{{eqn.name}}_label">
                      <input type="checkbox" id="{{eqn.name}}"> {{eqn.name}}
                   </label>
                   {% endfor %}
+                  </p>
+               </div>
+               <div id="plugins_all_checks" onclick="all_check()">
+                  <p> Plugins:
+                  {% for plugin in pluginlist %}
+                  <label id="{{plugin}}_label">
+                     <input type="checkbox" id="{{plugin}}"> {{plugin}}
+                  </label>
+                  {% endfor %}
+                  </p>
                </div>
                &nbsp
                <div class="list-group" id="line_list" style="height:35vh; overflow:auto">
@@ -124,6 +135,11 @@
                           <input type="checkbox" id="{{line.name}}_{{eqn.name}}" name="{{line.name}}_{{eqn.name}}"> {{eqn.name}}
                        </label>
                       {% endfor %}
+                      {% for plugin in pluginlist %}
+                      <label id="{{plugin}}_label">
+                          <input type="checkbox" id="{{line.name}}_{{plugin}}" name="{{line.name}}__{{plugin}}"> {{plugin}}
+                      </label>
+                      {% endfor %}
                     </div>
                   {% endfor %}
                </div>
@@ -133,6 +149,9 @@
                <div id="equations">
                   {% for eqn in equationlist %}
                   <input type="hidden" name="equation_flag_{{eqn.name}}" id="equation_flag_{{eqn.name}}" value="{{eqn.asString}}">
+                  {% endfor %}
+                  {% for plugin in pluginlist %}
+                  <input type="hidden" name="plugin_flag_{{plugin}}" id="plugin_flag_{{plugin}}" value="{{plugin}}">
                   {% endfor %}
                </div>
                <div class="row">

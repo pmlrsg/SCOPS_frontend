@@ -55,6 +55,7 @@ if os.path.exists(main_config_file):
     SYMLINK_PATH = flask_config.get('symlinks', 'hyperspectral_symlinks')
     LOG_FILE = flask_config.get('outputs', 'logfile')
     SERVER_BASE = flask_config.get('details', 'server_base')
+    PLUGIN_FOLDER = flask_config.get('inputs', 'plugin_directory')
 else:
     raise IOError("Config file web.cfg does not exist, please create this file. A template has been provided in web_template.cfg")
 
@@ -431,6 +432,7 @@ def config_output(requestdict, lines, filename, dem_name=None):
     config.set('DEFAULT', 'restart', 'False')
     config.set('DEFAULT', 'ftp_dem', 'False')
     config.set('DEFAULT', 'ftp_dem_confirmed', 'False')
+    config.set('DEFAULT', 'plugin_directory', PLUGIN_FOLDER)
 
     #if the proj string exists do something about it
     try:
@@ -654,26 +656,37 @@ def bandratiopage(configfile):
 
     config_file = ConfigParser.SafeConfigParser()
     config_file.read(os.path.join(support_functions.CONFIG_OUTPUT, configfile + ".cfg"))
-    lines = []
+    lines_in_cfg = []
     for section in config_file.sections():
-        lines.append({ "name": section})
+        lines_in_cfg.append({ "name": section})
     try:
         sortie = config_file.get('DEFAULT', 'sortie')
     except ConfigParser.NoOptionError:
         sortie = None
 
     project = db_testing.get_project_from_db(config_file.get('DEFAULT', 'year'), config_file.get('DEFAULT', 'julianday'), sortie, config_file.get('DEFAULT', 'project_code'))
-    lines = db_testing.get_project_flights(project["id"])
+    lines_db = db_testing.get_project_flights(project["id"])
+
+    #need to only include the lines selected from the previous stage (that are in the config file)
+    lines=[]
+    for line in lines_in_cfg:
+        for L in lines_db:
+            if L['name'] == line['name']:
+                lines.append(L)
 
     bands = lines[0]["bands"]
-
+    #TODO make these bands come from the wavelengths as different between sensors
     equationlist = [{'name' : 'ndvi','asString' : '(band253-band170)/(band253+band170)','asMathML' : '<mfrac><mrow><mi>band253</mi><mo>-</mo><mi>band170</mi></mrow><mrow><mi>band253</mi><mo>+</mo><mi>band170</mi></mrow></mfrac>' },
                     {'name' : 'ndbi','asString' : '(band460-band253)/(band460+band253)','asMathML' : '<mfrac><mrow><mi>band460</mi><mo>-</mo><mi>band253</mi></mrow><mrow><mi>band460</mi><mo>+</mo><mi>band253</mi></mrow></mfrac>'},
                     {'name' : 'ndwi','asString' : '(band281-band396)/(band281+band396)','asMathML' : '<mfrac><mrow><mi>band281</mi><mo>-</mo><mi>band396</mi></mrow><mrow><mi>band281</mi><mo>+</mo><mi>band396</mi></mrow></mfrac>'}]
 
+    plugins=os.listdir(PLUGIN_FOLDER)
+    plugins=[plugin for plugin in plugins if plugin.endswith(".py")]
+
     return render_template('bandratio.html',
                             lines=lines,
                             equationlist=equationlist,
+                            pluginlist=plugins,
                             bands=bands,
                             configfile=configfile,
                             project=config_file.get('DEFAULT', 'project_code'))
@@ -713,6 +726,19 @@ def bandratiooutput(configfile, requestdict):
                 for line in lines:
                     line_name = line.replace("_" + eq_name, '')
                     config_file.set(line_name, "eq_"+ eq_name, "True")
+
+        elif "plugin_flag" in key:
+            plugin_name = key.replace("plugin_flag_","")
+            config_file.set('DEFAULT', "plugin_"+ plugin_name, requestdict[key])
+            lines = []
+            for key in requestdict:
+                if plugin_name in key and not "plugin_flag_" in key:
+                    lines.append(key)
+            if lines:
+                for line in lines:
+                    print line
+                    line_name = line.replace("__"+plugin_name, '')
+                    config_file.set(line_name, "plugin_"+ plugin_name, "True")
 
     config_file.write(open(config_path, 'w'))
 
