@@ -681,7 +681,7 @@ def bandratiopage(configfile):
                     {'name' : 'ndwi','asString' : '(band281-band396)/(band281+band396)','asMathML' : '<mfrac><mrow><mi>band281</mi><mo>-</mo><mi>band396</mi></mrow><mrow><mi>band281</mi><mo>+</mo><mi>band396</mi></mrow></mfrac>'}]
 
     plugins=os.listdir(PLUGIN_FOLDER)
-    plugins=[plugin for plugin in plugins if plugin.endswith(".py")]
+    plugins=[os.path.splitext(plugin)[0] for plugin in plugins if plugin.endswith(".py")]
 
     return render_template('bandratio.html',
                             lines=lines,

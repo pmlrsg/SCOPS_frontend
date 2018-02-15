@@ -145,4 +145,17 @@ function all_check() {
             };
          };
       };
+   check_list = document.getElementById('plugins_all_checks').querySelectorAll("input[type='checkbox']");
+   for (var i = 0; i < check_list.length; i++) {
+         line_checks = document.getElementById('line_list').querySelectorAll('[id*=' +check_list[i].id+']');
+         console.log(line_checks);
+         for (var j = 0; j < line_checks.length; j++) {
+            if (check_list[i].checked) {
+               line_checks[j].checked = true;
+            } else {
+               line_checks[j].checked = false;
+            };
+         };
+      };
+
    };
