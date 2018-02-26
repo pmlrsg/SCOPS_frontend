@@ -31,7 +31,7 @@ from werkzeug.utils import secure_filename
 from arsf_dem import dem_nav_utilities
 from arsf_dem import grass_library
 
-import db_testing
+import scops_project_database
 import legacy_functions
 import support_functions
 
@@ -80,6 +80,9 @@ app.logger.setLevel(logging.INFO)
 @app.route('/dem_error/<projfolder>', methods=['GET', 'POST'])
 @requires_auth
 def dem_error(projfolder):
+    """
+    Spits out a page to inform the user thee was a problem with the dem
+    """
     issue = {'details':"The dem does not cover enough of the area",
              'projfolder':projfolder}
     return render_template("dem_error.html",
@@ -87,6 +90,9 @@ def dem_error(projfolder):
 
 @app.route('/dem_error/upload', methods=['POST'])
 def reupload_dem():
+    """
+    Allows the user to uppdate their dem file with a new one in the event of a problem.
+    """
     dem_name = None
     requestdict = request.form
     try:
@@ -268,6 +274,19 @@ def kml_page(name=None):
 @app.route('/jobrequest', methods=['GET', 'POST'])
 @requires_auth
 def job_request(name=None, errors=None):
+    """
+    Receives a request from html with the day, year and required project code
+    then returns a request page based on the data it finds in the proj dir
+
+    redirects to the old version in legacy functions if LEGACY_PAGE_GEN is set
+    to true
+
+    :param name: placeholder
+    :type name: str
+
+    :return: job request html page
+    :rtype: html
+    """
     if support_functions.LEGACY_PAGE_GEN:
         render = legacy_functions.legacy_job_request(request,
                                                      name,
@@ -297,12 +316,12 @@ def job_request(name=None, errors=None):
         sortie = None
 
     # sql injection stuff is handled within these functions
-    project = db_testing.get_project_from_db(year,
+    project = scops_project_database.get_project_from_db(year,
                                              day,
                                              sortie,
                                              proj_code)
 
-    lines = db_testing.get_project_flights(project["id"])
+    lines = scops_project_database.get_project_flights(project["id"])
 
     #spit out a new web page
     return render_template('requestform.html',
@@ -399,13 +418,28 @@ def submitted():
 
 
 def config_output(requestdict, lines, filename, dem_name=None):
+    """
+    Writes a config to the web processing configs folder, this will then be picked up by web_qsub
+
+    :param requestdict: A request converted to immutable dict from the job request page
+    :type requestdict: immutable dict
+
+    :param lines: list of flightlines to be processed
+    :type lines: list
+
+    :param filename: config filename to write to
+    :type filename: str
+
+    :return: 1 on success
+    :rtype: int
+    """
     if support_functions.LEGACY_PAGE_GEN:
         out = legacy_functions.legacy_config_output(requestdict, lines, filename, dem_name=None)
         return out
 
     config = ConfigParser.SafeConfigParser()
 
-    project = db_testing.get_project_from_db(requestdict["year"], requestdict["julianday"], requestdict["sortie"], requestdict["project"])
+    project = scops_project_database.get_project_from_db(requestdict["year"], requestdict["julianday"], requestdict["sortie"], requestdict["project"])
 
     #build the default section
     config.set('DEFAULT', "julianday", requestdict["julianday"])
@@ -506,6 +540,9 @@ def config_output(requestdict, lines, filename, dem_name=None):
 
 
 def progressweight(status):
+    """
+    Creates the status page status level
+    """
     weight = 0
     stageprogress=0
     stage="Waiting to process"
@@ -664,8 +701,8 @@ def bandratiopage(configfile):
     except ConfigParser.NoOptionError:
         sortie = None
 
-    project = db_testing.get_project_from_db(config_file.get('DEFAULT', 'year'), config_file.get('DEFAULT', 'julianday'), sortie, config_file.get('DEFAULT', 'project_code'))
-    lines_db = db_testing.get_project_flights(project["id"])
+    project = scops_project_database.get_project_from_db(config_file.get('DEFAULT', 'year'), config_file.get('DEFAULT', 'julianday'), sortie, config_file.get('DEFAULT', 'project_code'))
+    lines_db = scops_project_database.get_project_flights(project["id"])
 
     #need to only include the lines selected from the previous stage (that are in the config file)
     lines=[]

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ###########################################################
-# This file has been created by ARSF Data Analysis Node and
+# This file has been created by NERC-ARF Data Analysis Node and
 # is licensed under the GPL v3 Licence. A copy of this
 # licence is available to download with this file.
 ###########################################################
@@ -29,7 +29,7 @@ from numpy import arange
 from werkzeug.utils import secure_filename
 from arsf_dem import dem_nav_utilities
 from arsf_dem import grass_library
-import db_testing
+import scops_project_database
 import legacy_functions
 from common_arsf.web_functions import requires_auth, send_email
 
