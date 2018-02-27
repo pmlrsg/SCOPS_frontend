@@ -44,7 +44,6 @@ if os.path.exists(main_config_file):
     flask_config = ConfigParser.SafeConfigParser()
     flask_config.read(main_config_file)
     CONFIG_OUTPUT = flask_config.get('outputs', 'config_output')
-    #this will be used in the future, uploads aren't working at the moment
     UPLOAD_FOLDER = flask_config.get('outputs', 'dem_upload')
     WEB_PROCESSING_FOLDER = flask_config.get('outputs', 'processing_base')
     STATUS_FILE_FOLDER = flask_config.get('outputs', 'status_folder')
