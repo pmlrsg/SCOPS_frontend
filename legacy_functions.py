@@ -33,7 +33,12 @@ import scops_project_database
 import support_functions
 from flask import current_app as app
 
-from common_arsf.web_functions import requires_auth, send_email
+# Try to import NERC-ARF version of web_functions first.
+try:
+    from common_arsf.web_functions import requires_auth, send_email
+# Fallback on internal version
+except ImportError :
+    from scops_web_functions import requires_auth, send_email
 
 def legacy_bandratiopage(configfile):
     config_file = ConfigParser.SafeConfigParser()

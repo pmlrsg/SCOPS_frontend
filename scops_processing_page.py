@@ -361,7 +361,6 @@ def progress():
         filename = requestdict["project"] + '_' + requestdict["year"] + '_' + requestdict[
            "julianday"] + '_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         dem_path = None
-        print "poo!"
         save_dem = True
         if "optionsDemUploadRadios" in requestdict.keys():
             if "ftp_true" in requestdict["optionsDemUploadRadios"]:
@@ -748,16 +747,11 @@ def bandratiooutput(configfile, requestdict):
 
     for key in requestdict:
         if "equation_flag" in key:
-            print key
             eq_name = key.replace("equation_flag_","")
-            print eq_name
             config_file.set('DEFAULT', "eq_"+ eq_name, requestdict[key])
             lines = []
             for key in requestdict:
-                print key
-                print key
                 if eq_name in key and not "equation_flag_" in key:
-                    print key
                     lines.append(key)
             if lines:
                 for line in lines:
@@ -773,7 +767,6 @@ def bandratiooutput(configfile, requestdict):
                     lines.append(key)
             if lines:
                 for line in lines:
-                    print line
                     line_name = line.replace("__"+plugin_name, '')
                     config_file.set(line_name, "plugin_"+ plugin_name, "True")
 

@@ -31,7 +31,14 @@ from arsf_dem import dem_nav_utilities
 from arsf_dem import grass_library
 import scops_project_database
 import legacy_functions
-from common_arsf.web_functions import requires_auth, send_email
+
+
+# Try to import NERC-ARF version of web_functions first.
+try:
+    from common_arsf.web_functions import requires_auth, send_email
+# Fallback on internal version
+except ImportError :
+    from scops_web_functions import requires_auth, send_email
 
 main_config_file = os.path.join(os.path.split(__file__)[0],'web.cfg')
 if os.path.exists(main_config_file):
@@ -72,6 +79,8 @@ def getifov(sensor):
         ifov = 0.000645771823
     if "hawk" in sensor:
         ifov = 0.0019362246375
+    if "owl" in sensor:
+        ifov = 0.0010995574
     return ifov
 
 def sensor_lookup(sensor_prefix):

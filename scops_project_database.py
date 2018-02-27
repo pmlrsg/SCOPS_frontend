@@ -34,10 +34,17 @@ import sqlite3
 import json
 import support_functions
 
-from common_arsf.web_functions import requires_auth, send_email
+# Try to import NERC-ARF version of web_functions first.
+try:
+    from common_arsf.web_functions import requires_auth, send_email
+# Fallback on internal version
+except ImportError :
+    from scops_web_functions import requires_auth, send_email
 
 FLIGHT_LIST = []
 SYMLINK_PATH = "/home/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/"
+
+logger = logging.getLogger('scops_processing_page')
 
 def create_db():
     conn = sqlite3.connect(support_functions.DB)
@@ -108,12 +115,9 @@ def get_project_from_db(year, day, sortie, project_code):
     vals =  [year, day, sortie, project_code]
     c.execute("SELECT * FROM projects WHERE year IS ? AND julian_day IS ? AND sortie IS ? AND project_code IS ?", [str(year), str(day), sortie, project_code])
     project = c.fetchone()
-    print project
     projectdict = {}
     keys = ["id", "uk", "optimal_pixel", "north", "south", "east", "west", "julian_day", "year", "sortie", "project_code", "utmzone", "folder"]
-    print keys
     for i, column in enumerate(project):
-        print column
         projectdict[keys[i]] = column
     conn.commit()
     c.close()
@@ -140,43 +144,6 @@ def get_project_flights(proj_db_id):
     c.close()
     return flightline_dicts
 
-def hdr_reader(hdr_file_path):
-    """
-    Reads a header file and returns a dictionary of variables, would probably be
-    worth including a variable list in future
-    :param hdr_file_path: path to a header file
-    :type hdr_file_path: str
-
-    :return: hdr_dict, dictionary of variables
-    :rtype: dict
-    """
-    hdr_dict={}
-    for line_num, line in enumerate(open(hdr_file_path)):
-        if '=' in line:
-            if not '{' in line:
-                line = line.replace('\n', '')
-                var_name, var_val = line.split(' = ')
-                hdr_dict[var_name] = var_val
-            elif ('{' in line) and ('}' in line):
-                line = line.replace('\n','')
-                var_name, var_val = line.split(' = ')
-                var_val = var_val.replace('{','').replace('}','')
-                var_val = var_val.split(',')
-                hdr_dict[var_name] = var_val
-            elif '{' in line:
-                list_var = [line.split('{')[-1].replace('\n','')]
-                for seek_num, seek_line in enumerate(open(hdr_file_path)):
-                    if (seek_num > line_num):
-                        if '}' in seek_line:
-                            break
-                        else:
-                            list_var.append(seek_line.replace('\n', ''))
-                line = line.replace('\n', '')
-                var_name, var_val = line.split(' = ')
-                var_val = ''.join(list_var).strip('{}')
-                hdr_dict[var_name] = var_val.split(',')
-    return hdr_dict
-
 
 def proj_folder_to_details(flight):
     try:
@@ -194,8 +161,8 @@ def proj_folder_to_details(flight):
             day = proj_regex.search(flight).group(3)
             sortie = None
         except:
-            print "failed to find details"
-            print flight
+            logger.error("failed to find details")
+            logger.error("flight")
             raise Exception
     return proj_code, year, day, sortie
 
@@ -231,50 +198,12 @@ def db_gen():
             except TypeError:
                 continue
             except Exception as e:
-                print e
-                print "Failed!"
+                logger.error(e)
+                logger.error("Record creation failed! {}".format(flight))
                 continue
             proj_id = insert_proj_to_db(project)
             for line in lines:
                 insert_flightline_into_db(proj_id, line)
-
-def latlon_to_utm(lat,lon):
-    zone = int(math.floor((((lon + 180) / 6) % 60))) + 1
-    hem = 'N' if (lat > 0) else 'S'
-    return zone, hem
-
-def getifov(sensor):
-    """
-    Function for sensor ifov grabbing
-    :param sensor: sensor name, fenix eagle or hawk
-    :type sensor: str
-
-    :return: ifov
-    :rtype: float
-    """
-    if "fenix" in sensor:
-        ifov = 0.001448623
-    if "eagle" in sensor:
-        ifov = 0.000645771823
-    if "hawk" in sensor:
-        ifov = 0.0019362246375
-    if "owl" in sensor:
-        ifov = 0.0010995574
-    return ifov
-
-def pixelsize(altitude, sensor):
-    """
-    Works out the best pixelsize for a given sensor
-
-    :param altitude: altitude in meters
-    :type altitude: int
-    :param sensor: sensor name, fenix eagle or hawk
-    :type sensor: str
-
-    :return: pixel_size, recommended to be rounded
-    :rtype: float
-    """
-    return 2 * altitude * math.tan(getifov(sensor) / 2)
 
 def create_line_info(main_delivery):
     # grab 2 random flightlines for sampling of altitude, any more is going to cause problems with speed
@@ -289,12 +218,12 @@ def create_line_info(main_delivery):
 
     lines = []
     for line in line_hdrs:
-        linehdr = hdr_reader(line)
+        linehdr = support_functions.hdr_reader(line)
         waves = linehdr['Wavelength']
         bands=[]
         sensor = support_functions.sensor_lookup(os.path.basename(line)[0])
         # calculate pixelsize
-        pixel = pixelsize(altitude, sensor)
+        pixel = support_functions.pixelsize(altitude, sensor)
         # round it to .5 since we don't need greater resolution than this
         pixel = round(pixel * 2) / 2
         linexml = Etree.parse(glob.glob(main_delivery[0] + '/flightlines/line_information/' + os.path.basename(line)[:-10] + "*.xml")[0]).getroot()
@@ -356,7 +285,7 @@ def db_gen_flight_record(folder):
     except:
         #if the hyperspectral delivery doesn't exist then we either haven't finished processing it or there is no
         # hyperspectral data available. The user can't access it.
-        print "no hyper delivery!"
+        logger.warning("no hyper delivery!")
         hyper_delivery = None
 
     try:
@@ -364,7 +293,7 @@ def db_gen_flight_record(folder):
     except:
         #if the hyperspectral delivery doesn't exist then we either haven't finished processing it or there is no
         # hyperspectral data available. The user can't access it.
-        print "no thermal delivery!"
+        logger.warning("no thermal delivery!")
         thermal_delivery = None
 
     if not hyper_delivery:
@@ -376,13 +305,13 @@ def db_gen_flight_record(folder):
     try:
         projxml = Etree.parse(glob.glob(main_delivery[0] + '/project_information/*project.xml')[0]).getroot()
     except:
-        print "projxml failed"
-        print main_delivery
+        logger.error("projxml failed")
+        logger.error(main_delivery)
         try:
-            print glob.glob(main_delivery[0] + '/project_information/*project.xml')
+            logger.info(glob.glob(main_delivery[0] + '/project_information/*project.xml'))
         except:
             pass
-        print folder
+        logger.info(folder)
         return False
     #This is kind of gross but it's the best way to grab the full project bounds quickly, another option may be grabbing from the mapped header files
     bounds = {
@@ -399,7 +328,7 @@ def db_gen_flight_record(folder):
     #TODO have per line bounds so the bounding box can be reduced intelligently
 
     # get the utm zone
-    utmzone = latlon_to_utm(float(bounds["n"]), float(bounds["e"]))
+    utmzone = support_functions.latlon_to_utm(float(bounds["n"]), float(bounds["e"]))
 
     # if it's britain we should offer UKBNG on the web page
     if utmzone[0] in [29, 30, 31] and utmzone[1] in 'N':
@@ -436,7 +365,6 @@ def db_update():
     return True
 
 if not os.path.isfile(support_functions.DB):
-    print os.path.isfile(support_functions.DB)
     create_db()
     db_gen()
 else:
