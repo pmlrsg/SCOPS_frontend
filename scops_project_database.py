@@ -42,7 +42,6 @@ except ImportError :
     from scops_web_functions import requires_auth, send_email
 
 FLIGHT_LIST = []
-SYMLINK_PATH = "/home/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/"
 
 logger = logging.getLogger('scops_processing_page')
 
@@ -278,7 +277,7 @@ def db_gen_flight_record(folder):
         symlink_name = proj_code + '-' + year + '_' + day + sortie
 
     # this should (should) be where the kml is on web server, makes it annoying to test locally though
-    path_to_symlink = os.path.join(SYMLINK_PATH, year, symlink_name)
+    path_to_symlink = os.path.join(support_functions.SYMLINK_PATH, year, symlink_name)
 
     try:
         hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
