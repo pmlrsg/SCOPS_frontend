@@ -59,6 +59,11 @@ if os.path.exists(main_config_file):
     SENSORS = {sensor.replace("sensor_",""): flask_config._sections[sensor] for sensor in flask_config.sections() if "sensor" in sensor}
     #set pixel sizes, these probably won't need to change ever
     PIXEL_SIZES = arange(0.5, 7.5, 0.5)
+    USE_STATUS_DB = flask_config.getboolean('database', 'use_status_database')
+    if USE_STATUS_DB:
+        STATUS_DB_LOCATION = flask_config.get('database', 'status_database_location') if flask_config.get('database', 'status_database_location') != 'None' else None
+        if not os.path.isfile(STATUS_DB_LOCATION):
+            raise IOError("status database not in location specified {}".format(STATUS_DB_LOCATION))
 else:
     raise IOError("Config file web.cfg does not exist, please create this file. A template has been provided in web_template.cfg")
 

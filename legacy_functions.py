@@ -29,7 +29,6 @@ from numpy import arange
 from werkzeug.utils import secure_filename
 from arsf_dem import dem_nav_utilities
 from arsf_dem import grass_library
-import scops_project_database
 import support_functions
 from flask import current_app as app
 

@@ -35,6 +35,8 @@ import scops_project_database
 import legacy_functions
 import support_functions
 
+import scops_status_db
+
 # Try to import NERC-ARF version of web_functions first.
 try:
     from common_arsf.web_functions import requires_auth, send_email
@@ -209,7 +211,10 @@ def download_proj(projfolder):
     #they shouldn't!
     if not os.path.exists(projfolder):
         return "The file you tried to access does not exist!"
-    download_file = [x for x in glob.glob(projfolder + "/mapped/*.zip") if "bil" not in x][0]
+    try:
+        download_file = [x for x in glob.glob(projfolder + "/mapped/*.zip") if "bil" not in x][0]
+    except:
+        return "Processing not finalised, contact NERC-ARF-DAN for assistance"
     return send_from_directory(directory=os.path.dirname(download_file),
                                filename=os.path.basename(download_file),
                                mimetype='application/.zip',
@@ -584,7 +589,9 @@ def processingpageupdate(projfolder):
     return jsonify(lines)
 
 def processingpagedetails(projfolder):
-    #TODO add job number
+    if not support_functions.USE_STATUS_DB:
+        return legacy_processingpagedetails(projfolder)
+
     projfolder_path = WEB_PROCESSING_FOLDER + "processing/" + projfolder
     config = ConfigParser.SafeConfigParser()
     config.read(glob.glob(projfolder_path + "/*.cfg")[0])
@@ -600,6 +607,43 @@ def processingpagedetails(projfolder):
        "equations": equations
     }
 
+    db_lines = scops_status_db.get_processed_flightlines(projfolder)
+    lines = collections.OrderedDict()
+    for line in db_lines:
+        line_details = {
+           "name": line[2],
+           "stage": line[3],
+           "progress": line[4],
+           "filesize": line[5],
+           "bytesize": line[6],
+           "flag": True if line[7] == 1 else False,
+           "link": line[8],
+           "zipsize": line[9],
+           "zipbyte": line[10]
+        }
+        lines[line[2]] = line_details
+    return lines, processing_details, project_code
+    
+
+
+
+
+def legacy_processingpagedetails(projfolder):
+    projfolder_path = WEB_PROCESSING_FOLDER + "processing/" + projfolder
+    config = ConfigParser.SafeConfigParser()
+    config.read(glob.glob(projfolder_path + "/*.cfg")[0])
+    project_code = config.get("DEFAULT", "project_code")
+    equations = [x for x in config.items('DEFAULT') if "eq_" in x[0]]
+    processing_details = {
+       "dem": config.get("DEFAULT", 'dem'),
+       "bounds": config.get("DEFAULT", "bounds"),
+       "pixel_size": config.get("DEFAULT", "pixelsize"),
+       "projection": config.get("DEFAULT", "projection"),
+       "interpolation": config.get("DEFAULT", "interpolation"),
+       "projstring": config.get("DEFAULT", "projstring"),
+       "equations": equations
+    }
+    #TODO add job number
     lines = collections.OrderedDict()
     linesfolder = os.listdir(projfolder_path + "/status/")
     linesfolder.sort()
@@ -677,11 +721,14 @@ def statuspage(projfolder):
     :return: rendered webpage
     """
     lines, processing_details, project_code = processingpagedetails(projfolder)
+    all_complete = (len([line for line in lines.keys() if lines[line]['stage'].lower() == 'complete']) == len(lines))
     return render_template('status.html',
                             lines=lines,
                             projfolder=projfolder,
                             processing_details=processing_details,
-                            project_code=project_code)
+                            project_code=project_code,
+                            all_complete=all_complete,
+                            all_download=url_for('download_proj', projfolder=projfolder, project=project_code))
 
 @app.route('/bandratio/<configfile>', methods=['GET'])
 @requires_auth

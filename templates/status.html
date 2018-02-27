@@ -47,7 +47,7 @@ $( document).ready(function(){
                         <h5 class="text-right" id="{{ lines[line].name }}_compressed_size">Compressed download size: {{ lines[line].zipsize }} {{ lines[line].zipbyte }}</h5>
                      </div>
                      <div class="col-sm-2">
-                        <a href="{{ lines[line].link }}" class="pull-right btn btn-sm btn-primary {% if not lines[line].stage in 'Complete' %}disabled{% else %}active{% endif %}" id="{{ lines[line].name }}_download_btn">Download</a>
+                        <a href="{{ lines[line].link }}" class="pull-right btn btn-sm btn-primary {% if not lines[line].stage.lower() in 'complete' %}disabled{% else %}active{% endif %}" id="{{ lines[line].name }}_download_btn">Download</a>
                      </div>
                   </div>
                </div>
