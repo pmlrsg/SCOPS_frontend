@@ -387,9 +387,9 @@ $( document).ready(function(){
                             {% endif %}
                             <div class="radio">
                                     <div class="form-row">
-                                        <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string" disabled="">
+                                        <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string">
                                         <label for="projStringText col-lg-3" class="control-label">Proj string</label>
-                                        <input class="form-control col-lg-3" type="text" name="projString" id="projStringText" placeholder="proj" disabled="">
+                                        <input class="form-control col-lg-3" type="text" name="projString" id="projStringText" placeholder="proj">
                                     </div>
                             </div>
                         </div>
@@ -458,19 +458,19 @@ $( document).ready(function(){
                                 <div class="row">
                                     <label for="bound_n" class="col-lg-1 control-label">N:</label>
                                     <div class="col-lg-5" id="bound_n_cont">
-                                        <input type="number" pattern="[1-9]" step="0.00001" class="form-control" id="bound_n" name="bound_n" onblur="checkBoundingText(this)" value={{ bounds.n }} >
+                                        <input class="form-control" id="bound_n" name="bound_n" onblur="checkBoundingText(this)" value={{ bounds.n }} >
                                     </div>
                                     <label for="bound_s" class="col-lg-1 control-label">S:</label>
                                     <div class="col-lg-5" id="bound_s_cont">
-                                        <input type="number" pattern="[1-9]" step="0.00001"  class="form-control" id="bound_s" name="bound_s" onblur="checkBoundingText(this)" value={{ bounds.s }}>
+                                        <input class="form-control" id="bound_s" name="bound_s" onblur="checkBoundingText(this)" value={{ bounds.s }}>
                                     </div>
                                     <label for="bound_e" class="col-lg-1 control-label">E:</label>
                                     <div class="col-lg-5" id="bound_e_cont">
-                                        <input type="number" pattern="[1-9]" step="0.00001"  class="form-control" id="bound_e" name="bound_e" onblur="checkBoundingText(this)" value={{ bounds.e }}>
+                                        <input class="form-control" id="bound_e" name="bound_e" onblur="checkBoundingText(this)" value={{ bounds.e }}>
                                     </div>
                                     <label for="bound_w" pattern="[1-9]" class="col-lg-1 control-label">W:</label>
                                     <div class="col-lg-5" id="bound_w_cont">
-                                        <input type="number" pattern="[1-9]" step="0.00001" class="form-control" id="bound_w" name="bound_w" onblur="checkBoundingText(this)" value={{ bounds.w }}>
+                                        <input class="form-control" id="bound_w" name="bound_w" onblur="checkBoundingText(this)" value={{ bounds.w }}>
                                     </div>
                                 </div>
                             </div>

@@ -31,7 +31,7 @@ function update_status(project_string, project_code) {
                }
                document.getElementById(key + "_progress_bar").className = document.getElementById(key + "_progress_bar").className.replace("active","")
             }
-            if (page_deets[key]["stage"] == "Complete") {
+            if (page_deets[key]["stage"].toLowerCase() == "complete") {
                document.getElementById(key + "_progress_bar").className = document.getElementById(key + "_progress_bar").className.replace("active","")
                if (!(document.getElementById(key + "_download_btn").className.indexOf("active") > -1)) {
                   document.getElementById(key + "_download_btn").className = document.getElementById(key + "_download_btn").className.replace("disabled","")
