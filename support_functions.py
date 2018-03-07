@@ -165,6 +165,6 @@ def confirm_email(config_name, project, email):
               "\n" \
               "%s\n\n" \
               "If you have any questions or issues accessing the above link" \
-              " please email arsf-processing@pml.ac.uk quoting the reference %s" % (confirmation_link, config_name)
+              " please email %s quoting the reference %s" % (confirmation_link, SEND_EMAIL, config_name)
 
-    send_email(message, email, "ARSF confirmation email", SEND_EMAIL)
+    send_email(message, email, "NERC-ARF web processor confirmation email", SEND_EMAIL)

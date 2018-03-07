@@ -132,29 +132,6 @@ def reupload_dem():
     config.write(open(config_file, 'w'))
     return render_template('success.html')
 
-def confirm_email(config_name, project, email):
-    """
-    Sends a confirmation email to the email associated with a request, this
-    contains a link specific to the config file being referenced.
-    It will update the config file to show as confirmed=True when successful
-
-    :param config_name:
-    :param project:
-    :param email:
-    """
-    confirmation_link = "%s/processor/confirm/%s?project=%s" % (SERVER_BASE, config_name, project)
-
-    message = "You've received this email because your address was used to request processing from the NERC-ARF web" \
-              " processor. If you did not do this please ignore this email.\n\n" \
-              "Please confirm your email with the link below:\n" \
-              "\n" \
-              "%s\n\n" \
-              "If you have any questions or issues accessing the above link" \
-              " please email %s quoting the reference %s" % (confirmation_link, SEND_EMAIL, config_name)
-
-    send_email(message, email, "NERC-ARF web processor confirmation email", SEND_EMAIL)
-
-
 def validation(request):
     """
     Takes a dictionary of terms for config output and validates that the options are correct/don't pose a risk to our
