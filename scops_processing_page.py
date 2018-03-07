@@ -325,7 +325,8 @@ def job_request(name=None, errors=None):
                                              day,
                                              sortie,
                                              proj_code)
-
+    if project is None:
+        abort(404)
     lines = scops_project_database.get_project_flights(project["id"])
 
     #spit out a new web page

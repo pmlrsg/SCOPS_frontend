@@ -157,7 +157,7 @@ def confirm_email(config_name, project, email):
     :param project:
     :param email:
     """
-    confirmation_link = url_for("confirm_request", configname = config_name, project = project)
+    confirmation_link = url_for("confirm_request", configname = config_name, project = project, _external=True)
 
     message = "You have received this email because your address was used to request processing from the ARSF web" \
               " processor. If you did not do this please ignore this email.\n\n" \

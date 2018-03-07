@@ -116,6 +116,8 @@ def get_project_from_db(year, day, sortie, project_code):
     project = c.fetchone()
     projectdict = {}
     keys = ["id", "uk", "optimal_pixel", "north", "south", "east", "west", "julian_day", "year", "sortie", "project_code", "utmzone", "folder"]
+    if project is None:
+        return None
     for i, column in enumerate(project):
         projectdict[keys[i]] = column
     conn.commit()
